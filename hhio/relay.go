@@ -1,4 +1,4 @@
-package main
+package hhio
 
 import "github.com/stianeikeland/go-rpio/v4"
 

@@ -1,4 +1,4 @@
-package main
+package hhio
 
 import "context"
 import "errors"
@@ -36,6 +36,7 @@ func (us *Ultrasonic) loop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
+			close(us.C)
 			return
 
 		default:

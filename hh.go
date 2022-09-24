@@ -3,17 +3,17 @@ package main
 import "context"
 import "fmt"
 
-import "github.com/stianeikeland/go-rpio/v4"
+import "github.com/firestuff/hh/hhio"
 
 func main() {
-	err := rpio.Open()
+	err := hhio.Open()
 	if err != nil {
 		panic(err)
 	}
-	defer rpio.Close()
+	defer hhio.Close()
 
-	us := NewUltrasonic(context.TODO(), 6, 5)
-	mf := NewMedianFilter(us.C, 9)
+	us := hhio.NewUltrasonic(context.Background(), 6, 5)
+	mf := hhio.NewMedianFilter(us.C, 9)
 
 	for dist := range mf {
 		fmt.Printf("%f\n", dist)
