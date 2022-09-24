@@ -13,9 +13,17 @@ func main() {
 	defer hhio.Close()
 
 	us := hhio.NewUltrasonic(context.Background(), 6, 5)
-	mf := hhio.NewMedianFilter(us.C, 9)
+	mf := hhio.NewMedianFilter(us.C, 47)
+
+  r := hhio.NewRelay(21)
 
 	for dist := range mf {
 		fmt.Printf("%f\n", dist)
+
+    if dist < 50 {
+      r.On()
+    } else if dist > 70 {
+      r.Off()
+    }
 	}
 }
