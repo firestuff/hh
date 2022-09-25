@@ -4,6 +4,7 @@ import "github.com/stianeikeland/go-rpio/v4"
 
 type Relay struct {
 	pin rpio.Pin
+	on  bool
 }
 
 func NewRelay(pin int) *Relay {
@@ -18,8 +19,14 @@ func NewRelay(pin int) *Relay {
 
 func (r *Relay) On() {
 	r.pin.High()
+	r.on = true
 }
 
 func (r *Relay) Off() {
 	r.pin.Low()
+	r.on = false
+}
+
+func (r *Relay) IsOn() bool {
+	return r.on
 }

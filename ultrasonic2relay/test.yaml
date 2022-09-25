@@ -1,0 +1,11 @@
+relay:
+  control: 21
+ultrasonics:
+- trigger: 6
+  echo: 5
+- trigger: 23
+  echo: 22
+medianbuffer: 47
+oncm: 50
+offcm: 70
+onseconds: 5
