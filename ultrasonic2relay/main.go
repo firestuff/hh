@@ -1,7 +1,9 @@
 package main
 
 import "context"
+import "encoding/json"
 import "flag"
+import "log"
 import "math"
 import "os"
 import "time"
@@ -20,7 +22,8 @@ type Config struct {
 	OnCM  float64
 	OffCM float64
 
-	OnSeconds float64
+	OnSeconds  float64
+	OffSeconds float64
 }
 
 type Relay struct {
@@ -62,6 +65,7 @@ func main() {
 	}
 
 	onUntil := time.Time{}
+	offUntil := time.Time{}
 
 	for {
 		// Fetch new values
@@ -84,29 +88,25 @@ func main() {
 			}
 		}
 
-		// States:
-		// on 0, off *,   r Off, onUntil zero   -> stable
-		// on 1, off *,   r Off, onUntil zero   -> turn on
-		// on *, off *,   r On,  onUntil future -> stay on
-		// on *, off *,   r On,  onUntil past   -> turn off
-		// on *, off all, r Off, onUntil past   -> reset state
-
-		if on > 0 {
-			// At least one on, turn on
-			if onUntil.IsZero() {
-				r.On()
-				onUntil = time.Now().Add(time.Duration(cf.OnSeconds * float64(time.Second)))
-			}
-		} else if off == len(uss) {
-			// All off, turn off
-			if !r.IsOn() {
-				onUntil = time.Time{}
-			}
+		if !r.IsOn() && on > 0 && onUntil.IsZero() && offUntil.IsZero() {
+			// Not on, no timers, something detected
+			r.On()
+			onUntil = time.Now().Add(time.Duration(cf.OnSeconds * float64(time.Second)))
+			log.Printf("on     %s", fmtDists(last))
 		}
 
-		// Time target expired
-		if !onUntil.IsZero() && onUntil.Before(time.Now()) {
+		if r.IsOn() && onUntil.Before(time.Now()) {
+			// On timer expired, turn off
 			r.Off()
+			offUntil = time.Now().Add(time.Duration(cf.OffSeconds * float64(time.Second)))
+			log.Printf("off    %s", fmtDists(last))
+		}
+
+		if !r.IsOn() && on == 0 && off == len(uss) && !offUntil.IsZero() && offUntil.Before(time.Now()) {
+			// All quiet and timers expired, reset state
+			onUntil = time.Time{}
+			offUntil = time.Time{}
+			log.Printf("reset  %s", fmtDists(last))
 		}
 	}
 }
@@ -129,4 +129,19 @@ func readConf() (*Config, error) {
 	}
 
 	return c, nil
+}
+
+func fmtDists(dists []float64) string {
+	ints := make([]int, len(dists))
+
+	for i, d := range dists {
+		ints[i] = int(d)
+	}
+
+	b, err := json.Marshal(ints)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(b)
 }
