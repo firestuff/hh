@@ -35,6 +35,14 @@ type Ultrasonic struct {
 	Echo    int
 }
 
+type state int
+
+const (
+	onTimer state = iota
+	offTimer
+	watching
+)
+
 func main() {
 	flag.Parse()
 
@@ -64,8 +72,8 @@ func main() {
 		last[i] = math.MaxFloat64
 	}
 
-	onUntil := time.Time{}
-	offUntil := time.Time{}
+	var st state = watching
+	var onUntil, offUntil time.Time
 
 	for {
 		// Fetch new values
@@ -88,25 +96,28 @@ func main() {
 			}
 		}
 
-		if !r.IsOn() && on > 0 && onUntil.IsZero() && offUntil.IsZero() {
-			// Not on, no timers, something detected
-			r.On()
-			onUntil = time.Now().Add(time.Duration(cf.OnSeconds * float64(time.Second)))
-			log.Printf("on     %s", fmtDists(last))
-		}
+		switch st {
+		case watching:
+			if on > 0 {
+				log.Printf("on     %s", fmtDists(last))
+				r.On()
+				onUntil = time.Now().Add(time.Duration(cf.OnSeconds * float64(time.Second)))
+				st = onTimer
+			}
 
-		if r.IsOn() && onUntil.Before(time.Now()) {
-			// On timer expired, turn off
-			r.Off()
-			offUntil = time.Now().Add(time.Duration(cf.OffSeconds * float64(time.Second)))
-			log.Printf("off    %s", fmtDists(last))
-		}
+		case onTimer:
+			if time.Now().After(onUntil) {
+				log.Printf("off    %s", fmtDists(last))
+				r.Off()
+				offUntil = time.Now().Add(time.Duration(cf.OffSeconds * float64(time.Second)))
+				st = offTimer
+			}
 
-		if !r.IsOn() && on == 0 && off == len(uss) && !offUntil.IsZero() && offUntil.Before(time.Now()) {
-			// All quiet and timers expired, reset state
-			onUntil = time.Time{}
-			offUntil = time.Time{}
-			log.Printf("reset  %s", fmtDists(last))
+		case offTimer:
+			if time.Now().After(offUntil) && on == 0 && off == len(uss) {
+				log.Printf("reset  %s", fmtDists(last))
+				st = watching
+			}
 		}
 	}
 }
