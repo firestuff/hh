@@ -84,6 +84,13 @@ func main() {
 			}
 		}
 
+		// States:
+		// on 0, off *,   r Off, onUntil zero   -> stable
+		// on 1, off *,   r Off, onUntil zero   -> turn on
+		// on *, off *,   r On,  onUntil future -> stay on
+		// on *, off *,   r On,  onUntil past   -> turn off
+		// on *, off all, r Off, onUntil past   -> reset state
+
 		if on > 0 {
 			// At least one on, turn on
 			if onUntil.IsZero() {
@@ -97,6 +104,7 @@ func main() {
 			}
 		}
 
+		// Time target expired
 		if !onUntil.IsZero() && onUntil.Before(time.Now()) {
 			r.Off()
 		}
